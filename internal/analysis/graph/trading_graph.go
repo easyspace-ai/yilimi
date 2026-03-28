@@ -15,6 +15,7 @@ import (
 	"github.com/easyspace-ai/yilimi/internal/analysis/agents/riskmgmt/judge"
 	"github.com/easyspace-ai/yilimi/internal/analysis/agents/riskmgmt/neutral"
 	"github.com/easyspace-ai/yilimi/internal/analysis/agents/trader"
+	"github.com/easyspace-ai/yilimi/internal/analysis/datacollect"
 
 	"github.com/cloudwego/eino/adk"
 )
@@ -24,10 +25,10 @@ type TradingWorkflow struct {
 	workflow adk.Agent
 }
 
-// NewTradingWorkflow 创建完整的交易分析工作流
-func NewTradingWorkflow(ctx context.Context) (*TradingWorkflow, error) {
+// NewTradingWorkflow 创建完整的交易分析工作流（分析师使用 pool 注入数据）。
+func NewTradingWorkflow(ctx context.Context, pool *datacollect.Pool) (*TradingWorkflow, error) {
 	// ========== 阶段 1: 6 名分析师并行分析 ==========
-	analystAgents, err := agents.GetAllAnalysts(ctx)
+	analystAgents, err := agents.GetAllAnalysts(ctx, pool)
 	if err != nil {
 		return nil, fmt.Errorf("get analysts: %w", err)
 	}

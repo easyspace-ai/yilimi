@@ -16,6 +16,14 @@ type StockTools struct {
 	client *tsdb.UnifiedClient
 }
 
+// UnifiedClient 返回底层 tsdb 客户端（供 datacollect 等复用同一数据源）。
+func (s *StockTools) UnifiedClient() *tsdb.UnifiedClient {
+	if s == nil {
+		return nil
+	}
+	return s.client
+}
+
 // NewStockTools 创建股票数据工具集
 func NewStockTools(dataDir string) (*StockTools, error) {
 	client, err := tsdb.NewUnifiedClient(tsdb.UnifiedConfig{

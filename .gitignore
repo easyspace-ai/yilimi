@@ -73,7 +73,7 @@ ENV/
 *~
 test/
 
-stockdb/
+# 勿使用裸 stockdb/：会误忽略 Go 包 internal/.../persistence/stockdb
 tdx-api/
 akquant/
 

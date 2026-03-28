@@ -12,7 +12,10 @@ import (
 	"time"
 
 	"github.com/easyspace-ai/yilimi/internal/analysis/agents/common"
+	"github.com/easyspace-ai/yilimi/internal/analysis/datacollect"
 	"github.com/easyspace-ai/yilimi/internal/analysis/graph"
+	"github.com/easyspace-ai/yilimi/internal/analysis/tools"
+	"github.com/easyspace-ai/yilimi/internal/appenv"
 
 	"github.com/cloudwego/eino/adk"
 	"github.com/cloudwego/eino/schema"
@@ -190,7 +193,8 @@ func buildUserQuery(req AnalysisRequest) string {
 	}
 	return fmt.Sprintf(`请对 A 股标的 %s 进行完整的多智能体投研分析。交易基准日：%s。
 分析目标：%s。
-请按需调用数据工具，依次完成各角色分析，最后给出明确风险提示（不构成投资建议）。`,
+各分析师系统提示词中已注入本轮预抓取的数据附录，请严格基于附录分析，勿再向用户索要「工具权限」。交易员等环节如需工具可照常使用。
+最后给出明确风险提示（不构成投资建议）。`,
 		req.Symbol, td, obj)
 }
 
@@ -423,7 +427,24 @@ func mapAgentEvent(ctx context.Context, ev *adk.AgentEvent, emit JobEmit, acc *t
 	return nil
 }
 
-func buildResultMap(req AnalysisRequest, acc *textAccumulator) map[string]any {
+func dedupeStrings(in []string) []string {
+	seen := make(map[string]struct{})
+	var out []string
+	for _, s := range in {
+		s = strings.TrimSpace(s)
+		if s == "" {
+			continue
+		}
+		if _, ok := seen[s]; ok {
+			continue
+		}
+		seen[s] = struct{}{}
+		out = append(out, s)
+	}
+	return out
+}
+
+func buildResultMap(req AnalysisRequest, acc *textAccumulator, pool *datacollect.Pool) map[string]any {
 	res := map[string]any{
 		"symbol":              req.Symbol,
 		"trade_date":          req.TradeDate,
@@ -456,8 +477,13 @@ func buildResultMap(req AnalysisRequest, acc *textAccumulator) map[string]any {
 			copy(w, acc.warnings)
 			res["analysis_warnings"] = w
 		}
-		if gaps := extractDataGapsFromText(acc.allAccumulatedText()); len(gaps) > 0 {
-			res["data_gaps"] = gaps
+		var gaps []string
+		gaps = append(gaps, extractDataGapsFromText(acc.allAccumulatedText())...)
+		if pool != nil {
+			gaps = append(gaps, pool.DataGaps()...)
+		}
+		if g := dedupeStrings(gaps); len(g) > 0 {
+			res["data_gaps"] = g
 		}
 		if acc.partial {
 			res["analysis_status"] = "partial"
@@ -531,7 +557,29 @@ func RunTradingWorkflow(ctx context.Context, jm *JobManager, jobID string, req A
 	jm.UpdateJobStatus(jobID, JobStatusRunning)
 	emit("job.running", map[string]any{"symbol": req.Symbol, "msg": "深度投研分析已启动"})
 
-	twf, err := graph.NewTradingWorkflow(ctx)
+	collector, err := datacollect.EnsureCollectorForWorkflow(appenv.DataRootDir(), tools.GlobalUnifiedClient())
+	if err != nil {
+		jm.CommitJobFailure(jobID)
+		emit("job.failed", map[string]any{"error": err.Error()})
+		jm.persistJobReportFailed(jobID, req, err.Error())
+		return err
+	}
+	tradeISO := strings.TrimSpace(req.TradeDate)
+	if tradeISO == "" {
+		tradeISO = todayCN()
+	}
+	if norm, e := datacollect.NormDateISO(tradeISO); e == nil {
+		tradeISO = norm
+	}
+	pool, err := collector.Collect(ctx, req.Symbol, tradeISO)
+	if err != nil {
+		jm.CommitJobFailure(jobID)
+		emit("job.failed", map[string]any{"error": "数据预采失败: " + err.Error()})
+		jm.persistJobReportFailed(jobID, req, err.Error())
+		return err
+	}
+
+	twf, err := graph.NewTradingWorkflow(ctx, pool)
 	if err != nil {
 		jm.CommitJobFailure(jobID)
 		emit("job.failed", map[string]any{"error": err.Error()})
@@ -573,7 +621,7 @@ func RunTradingWorkflow(ctx context.Context, jm *JobManager, jobID string, req A
 	}
 
 finished:
-	result := buildResultMap(req, acc)
+	result := buildResultMap(req, acc, pool)
 	payload := completionPayload(result)
 	mergePayloadExtras(result, payload)
 

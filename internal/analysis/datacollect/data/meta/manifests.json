@@ -1,0 +1,50 @@
+{
+  "adj_factor": {
+    "dataset": "adj_factor",
+    "files": [
+      "data/lake/adj_factor/part-1774717689402477000.parquet",
+      "data/lake/adj_factor/part-1774717689403990000.parquet",
+      "data/lake/adj_factor/part-1774717689405033000.parquet",
+      "data/lake/adj_factor/part-1774717689405961000.parquet",
+      "data/lake/adj_factor/part-1774717689406789000.parquet",
+      "data/lake/adj_factor/part-1774717689407648000.parquet",
+      "data/lake/adj_factor/part-1774717689408283000.parquet",
+      "data/lake/adj_factor/part-1774717689408611000.parquet",
+      "data/lake/adj_factor/part-1774717689408903000.parquet",
+      "data/lake/adj_factor/part-1774717689409197000.parquet",
+      "data/lake/adj_factor/part-1774717689409505000.parquet",
+      "data/lake/adj_factor/part-1774717689409801000.parquet",
+      "data/lake/adj_factor/part-1774717689410147000.parquet"
+    ]
+  },
+  "daily": {
+    "dataset": "daily",
+    "files": [
+      "data/lake/daily/part-1774717689166559000.parquet",
+      "data/lake/daily/part-1774717689169003000.parquet",
+      "data/lake/daily/part-1774717689169507000.parquet",
+      "data/lake/daily/part-1774717689169886000.parquet",
+      "data/lake/daily/part-1774717689170258000.parquet",
+      "data/lake/daily/part-1774717689170995000.parquet",
+      "data/lake/daily/part-1774717689171378000.parquet",
+      "data/lake/daily/part-1774717689171719000.parquet",
+      "data/lake/daily/part-1774717689172072000.parquet",
+      "data/lake/daily/part-1774717689172866000.parquet",
+      "data/lake/daily/part-1774717689173433000.parquet",
+      "data/lake/daily/part-1774717689173770000.parquet",
+      "data/lake/daily/part-1774717689174092000.parquet"
+    ]
+  },
+  "stock_basic": {
+    "dataset": "stock_basic",
+    "files": [
+      "data/lake/stock_basic/part-1774717696739593000.parquet"
+    ]
+  },
+  "trade_cal": {
+    "dataset": "trade_cal",
+    "files": [
+      "data/lake/trade_cal/part-1774717689020798000.parquet"
+    ]
+  }
+}

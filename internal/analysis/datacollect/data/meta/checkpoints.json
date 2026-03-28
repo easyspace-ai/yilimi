@@ -1,0 +1,26 @@
+{
+  "adj_factor": {
+    "dataset": "adj_factor",
+    "last_synced_date": "20240628",
+    "last_successful_at": "2026-03-29T01:08:09.410439+08:00",
+    "schema_version": "v1"
+  },
+  "daily": {
+    "dataset": "daily",
+    "last_synced_date": "20240628",
+    "last_successful_at": "2026-03-29T01:08:09.174405+08:00",
+    "schema_version": "v1"
+  },
+  "stock_basic": {
+    "dataset": "stock_basic",
+    "last_synced_date": "20260329",
+    "last_successful_at": "2026-03-29T01:08:16.744637+08:00",
+    "schema_version": "v1"
+  },
+  "trade_cal": {
+    "dataset": "trade_cal",
+    "last_synced_date": "20240628",
+    "last_successful_at": "2026-03-29T01:08:09.023068+08:00",
+    "schema_version": "v1"
+  }
+}

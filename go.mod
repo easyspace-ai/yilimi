@@ -2,6 +2,8 @@ module github.com/easyspace-ai/yilimi
 
 go 1.25.1
 
+replace github.com/easyspace-ai/stock_api => ../stock_api
+
 require (
 	github.com/cloudwego/eino v0.8.5
 	github.com/cloudwego/eino-ext/components/model/openai v0.1.10

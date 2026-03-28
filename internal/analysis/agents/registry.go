@@ -20,6 +20,7 @@ import (
 	"github.com/easyspace-ai/yilimi/internal/analysis/agents/riskmgmt/judge"
 	"github.com/easyspace-ai/yilimi/internal/analysis/agents/riskmgmt/neutral"
 	"github.com/easyspace-ai/yilimi/internal/analysis/agents/trader"
+	"github.com/easyspace-ai/yilimi/internal/analysis/datacollect"
 
 	"github.com/cloudwego/eino/adk"
 )
@@ -41,13 +42,7 @@ var (
 func initRegistry() {
 	registryOnce.Do(func() {
 		Registry = []AgentInfo{
-			// 分析师团队
-			{Name: "市场分析师", Description: "专业的技术面分析专家", Creator: market.NewAgent},
-			{Name: "舆情分析师", Description: "专业的市场情绪分析专家", Creator: sentiment.NewAgent},
-			{Name: "新闻分析师", Description: "专业的新闻分析专家", Creator: news.NewAgent},
-			{Name: "基本面分析师", Description: "专业的财务分析专家", Creator: fundamentals.NewAgent},
-			{Name: "宏观分析师", Description: "专业的宏观经济分析专家", Creator: macro.NewAgent},
-			{Name: "主力资金分析师", Description: "专业的资金流向分析专家", Creator: smartmoney.NewAgent},
+			// 六名分析师由 GetAllAnalysts(ctx, pool) 构建（需注入数据池）。
 
 			// 研究员团队
 			{Name: "多头研究员", Description: "专业的多头分析专家", Creator: bull.NewAgent},
@@ -74,21 +69,28 @@ func GetRegistry() []AgentInfo {
 	return Registry
 }
 
-// GetAllAnalysts 获取所有分析师
-func GetAllAnalysts(ctx context.Context) ([]adk.Agent, error) {
-	initRegistry()
-	var agents []adk.Agent
-	for _, info := range Registry {
-		switch info.Name {
-		case "市场分析师", "舆情分析师", "新闻分析师", "基本面分析师", "宏观分析师", "主力资金分析师":
-			agent, err := info.Creator(ctx)
-			if err != nil {
-				return nil, err
-			}
-			agents = append(agents, agent)
-		}
+// GetAllAnalysts 获取所有分析师（注入 datacollect 数据池；nil 则使用空池）。
+func GetAllAnalysts(ctx context.Context, pool *datacollect.Pool) ([]adk.Agent, error) {
+	if pool == nil {
+		pool = &datacollect.Pool{}
 	}
-	return agents, nil
+	builders := []func(context.Context, *datacollect.Pool) (adk.Agent, error){
+		market.NewAgent,
+		sentiment.NewAgent,
+		news.NewAgent,
+		fundamentals.NewAgent,
+		macro.NewAgent,
+		smartmoney.NewAgent,
+	}
+	var out []adk.Agent
+	for _, b := range builders {
+		a, err := b(ctx, pool)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, a)
+	}
+	return out, nil
 }
 
 // GetRiskDebaters 获取所有风控辩论师
