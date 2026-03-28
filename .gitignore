@@ -1,0 +1,80 @@
+# ========== 环境变量（含密钥、Token）==========
+.env
+.env.*
+!.env.example
+!.env.sample
+!.env*.example
+
+# ========== 本地 / 密钥配置文件 ==========
+# dailyapi：真实密钥写在 config.json，仓库仅保留 config.json.example
+dailyapi/config.json
+
+# 云/API 凭证、服务账号（按需保留示例文件为 *.example）
+*credentials*.json
+*service-account*.json
+*serviceAccount*.json
+*-firebase-adminsdk*.json
+google-application-default*.json
+**/application_default_credentials.json
+
+# 本地工具 / 代理密钥（若存在）
+.npmrc
+.yarnrc.yml
+.pypirc
+
+# 可选：PM2 若使用单独的本地覆盖（含明文端口/环境）
+ecosystem.config.local.js
+ecosystem.config.local.cjs
+
+# ========== dailyapi / Python 运行态 ==========
+dailyapi/.venv/
+dailyapi/.env
+dailyapi/agents.yaml
+dailyapi/portfolio.migrated
+dailyapi/*.db
+dailyapi/*.db-shm
+dailyapi/*.db-wal
+
+# ========== 后端 / 数据目录（含本地库与缓存库，易含路径与业务数据）==========
+backend/.env
+backend/data/*.db
+backend/data/*.db-shm
+backend/data/*.db-wal
+
+# ========== 回测 API ==========
+backtestapi/.venv/
+backtestapi/.env
+
+# ========== 主前端（.env.local 等已由子目录规则覆盖，此处兜底）==========
+frontend/.env
+frontend/.env.local
+frontend/.env.*.local
+frontend/node_modules/
+# ========== 通用构建与依赖（根仓库一视同仁）==========
+node_modules/
+dist/
+build/
+coverage/
+*.log
+.DS_Store
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+ENV/
+
+# ========== IDE ==========
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+test/
+
+stockdb/
+tdx-api/
+akquant/
+
+backend/data/
