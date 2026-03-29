@@ -27,6 +27,28 @@ func formatDataFrame(df *tsdb.DataFrame, maxRows int) string {
 	return sb.String()
 }
 
+// formatDataFrameTail 节选时间序列末尾若干条（用于 OHLCV：分析师需看最近行情而非最旧片段）。
+func formatDataFrameTail(df *tsdb.DataFrame, maxRows int) string {
+	if df == nil || len(df.Rows) == 0 {
+		return "无数据"
+	}
+	var sb strings.Builder
+	sb.WriteString(fmt.Sprintf("共 %d 条，列：%v\n", len(df.Rows), df.Columns))
+	if maxRows > 0 && len(df.Rows) > maxRows {
+		skip := len(df.Rows) - maxRows
+		sb.WriteString(fmt.Sprintf("（以下节选最近 %d 条，省略较早的 %d 条）\n\n", maxRows, skip))
+		for i := skip; i < len(df.Rows); i++ {
+			sb.WriteString(fmt.Sprintf("%d. %v\n", i-skip+1, df.Rows[i]))
+		}
+		return sb.String()
+	}
+	sb.WriteString("\n")
+	for i := 0; i < len(df.Rows); i++ {
+		sb.WriteString(fmt.Sprintf("%d. %v\n", i+1, df.Rows[i]))
+	}
+	return sb.String()
+}
+
 func formatNewsList(items []realtimedata.News, max int) string {
 	if len(items) == 0 {
 		return "（近期无抓取到个股资讯条目）"

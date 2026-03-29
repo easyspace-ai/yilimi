@@ -134,7 +134,8 @@ func (c *Collector) Collect(ctx context.Context, tsCode, tradeDateISO string) (*
 			return fmt.Errorf("empty stock daily rows")
 		}
 		mu.Lock()
-		pool.StockDataText = formatDataFrame(df, 60)
+		// 附录展示最近 K 线（旧实现取前 60 条会丢掉最新月份，分析师误以为缺数）
+		pool.StockDataText = formatDataFrameTail(df, 100)
 		pool.Indicators = BuildIndicatorsBlock(df)
 		mu.Unlock()
 		return nil
@@ -229,6 +230,9 @@ func (c *Collector) Collect(ctx context.Context, tsCode, tradeDateISO string) (*
 
 	head := fmt.Sprintf("标的：%s\n用户请求基准日：%s\n解析用于数据的最近交易日：%s（%s）\n日线拉取区间(YYYYMMDD)：%s ~ %s\n\n",
 		tsCode, reqISO, resISO, resYMD, startFetch, endFetch)
+	if reqISO != resISO {
+		head += "【重要】所选基准日不是用于取数的 A 股交易日（含周末/节假日、或日历回退）。中国股市休市日无连续竞价产生的「当日」日线；下文 OHLCV 与技术指标均以「解析后的最近交易日」为末端，不得当作所选自然日的收盘行情。\n\n"
+	}
 	if pool.StockDataText != "" && !strings.HasPrefix(pool.StockDataText, "（通达信") {
 		pool.StockDataText = head + "【日线 OHLCV（前复权，节选）】\n" + pool.StockDataText
 	} else if pool.StockDataText != "" {

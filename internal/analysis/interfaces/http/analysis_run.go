@@ -182,7 +182,7 @@ func ConcatUserMessages(msgs []Message) string {
 	return b.String()
 }
 
-func buildUserQuery(req AnalysisRequest) string {
+func buildUserQuery(req AnalysisRequest, pool *datacollect.Pool) string {
 	td := req.TradeDate
 	if td == "" {
 		td = todayCN()
@@ -191,11 +191,19 @@ func buildUserQuery(req AnalysisRequest) string {
 	if obj == "" {
 		obj = "完整投研与交易风险评估"
 	}
-	return fmt.Sprintf(`请对 A 股标的 %s 进行完整的多智能体投研分析。交易基准日：%s。
+	base := fmt.Sprintf(`请对 A 股标的 %s 进行完整的多智能体投研分析。交易基准日：%s。
 分析目标：%s。
 各分析师系统提示词中已注入本轮预抓取的数据附录，请严格基于附录分析，勿再向用户索要「工具权限」。交易员等环节如需工具可照常使用。
 最后给出明确风险提示（不构成投资建议）。`,
 		req.Symbol, td, obj)
+	if pool != nil && pool.Meta.RequestedTradeDateISO != "" && pool.Meta.ResolvedTradeDateISO != "" &&
+		pool.Meta.RequestedTradeDateISO != pool.Meta.ResolvedTradeDateISO {
+		base += fmt.Sprintf(`
+
+【交易日提醒】用户所选自然日/基准日 %s 不是 A 股交易日（或系统已回退）。实际附录数据与指标末端对应最近交易日 %s。若用户口头指「今天」且当天休市，必须在报告开头明确：A 股休市、不存在当日 K 线与收盘；勿将 %s 误称为当日行情。`,
+			pool.Meta.RequestedTradeDateISO, pool.Meta.ResolvedTradeDateISO, td)
+	}
+	return base
 }
 
 type textAccumulator struct {
@@ -450,6 +458,13 @@ func buildResultMap(req AnalysisRequest, acc *textAccumulator, pool *datacollect
 		"trade_date":          req.TradeDate,
 		"company_of_interest": req.Symbol,
 	}
+	if pool != nil {
+		res["trade_date_resolved"] = pool.Meta.ResolvedTradeDateISO
+		if pool.Meta.RequestedTradeDateISO != pool.Meta.ResolvedTradeDateISO {
+			res["trade_date_calendar_note"] = fmt.Sprintf("所选基准日 %s 非 A 股交易日或已回退；附录行情末端为最近交易日 %s。",
+				pool.Meta.RequestedTradeDateISO, pool.Meta.ResolvedTradeDateISO)
+		}
+	}
 	// 固定顺序合并同一 section，避免 range map 随机
 	agentOrder := []string{
 		"市场分析师", "舆情分析师", "新闻分析师", "基本面分析师", "宏观分析师", "主力资金分析师",
@@ -539,6 +554,12 @@ func completionPayload(result map[string]any) map[string]any {
 		if r, ok := result["partial_reason"].(string); ok && r != "" {
 			p["partial_reason"] = r
 		}
+		if s, ok := result["trade_date_resolved"].(string); ok && s != "" {
+			p["trade_date_resolved"] = s
+		}
+		if s, ok := result["trade_date_calendar_note"].(string); ok && s != "" {
+			p["trade_date_calendar_note"] = s
+		}
 	}
 	return p
 }
@@ -578,6 +599,16 @@ func RunTradingWorkflow(ctx context.Context, jm *JobManager, jobID string, req A
 		jm.persistJobReportFailed(jobID, req, err.Error())
 		return err
 	}
+	if pool != nil && pool.Meta.RequestedTradeDateISO != pool.Meta.ResolvedTradeDateISO {
+		emit("job.running", map[string]any{
+			"symbol": req.Symbol,
+			"msg": fmt.Sprintf("提示：所选基准日 %s 非 A 股交易日（周末/节假日休市或日历回退），已按最近交易日 %s 拉取附录数据。",
+				pool.Meta.RequestedTradeDateISO, pool.Meta.ResolvedTradeDateISO),
+			"calendar_adjustment":  true,
+			"requested_trade_date": pool.Meta.RequestedTradeDateISO,
+			"resolved_trade_date":  pool.Meta.ResolvedTradeDateISO,
+		})
+	}
 
 	twf, err := graph.NewTradingWorkflow(ctx, pool)
 	if err != nil {
@@ -591,7 +622,7 @@ func RunTradingWorkflow(ctx context.Context, jm *JobManager, jobID string, req A
 		Agent:           twf.GetAgent(),
 		EnableStreaming: true,
 	})
-	iter := runner.Query(ctx, buildUserQuery(req))
+	iter := runner.Query(ctx, buildUserQuery(req, pool))
 	acc := newAccumulator()
 
 	type nextEv struct {

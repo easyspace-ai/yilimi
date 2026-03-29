@@ -65,8 +65,9 @@ func ResolveTradeDate(ctx context.Context, client *tsdb.UnifiedClient, endISO st
 		EndDate:   endY,
 	})
 	if err != nil || df == nil || len(df.Rows) == 0 {
-		// 无日历则退回请求日（或简单周末回退可由调用方处理）
-		return endISO, endY, nil
+		// 无交易日历库时：至少对周末做上海时区回退，避免 end 落在周六日导致日线/指标窗口错误
+		fb := rollbackAshareWeekendISO(endISO)
+		return fb, ToYYYYMMDD(fb), nil
 	}
 
 	type row struct {
@@ -106,7 +107,8 @@ func ResolveTradeDate(ctx context.Context, client *tsdb.UnifiedClient, endISO st
 		opens = append(opens, row{d: ds, iso: iso})
 	}
 	if len(opens) == 0 {
-		return endISO, endY, nil
+		fb := rollbackAshareWeekendISO(endISO)
+		return fb, ToYYYYMMDD(fb), nil
 	}
 	sort.Slice(opens, func(i, j int) bool { return opens[i].d < opens[j].d })
 	endCmp := strings.ReplaceAll(endISO, "-", "")
@@ -149,4 +151,24 @@ func ymdToISO(ymd string) string {
 		return ymd
 	}
 	return ymd[:4] + "-" + ymd[4:6] + "-" + ymd[6:8]
+}
+
+// rollbackAshareWeekendISO 将周六、周日回退到上周五（Asia/Shanghai）；非周末原样返回。不含法定节假日，需 trade_cal 覆盖。
+func rollbackAshareWeekendISO(iso string) string {
+	loc, err := time.LoadLocation("Asia/Shanghai")
+	if err != nil {
+		loc = time.Local
+	}
+	t, err := time.ParseInLocation("2006-01-02", iso, loc)
+	if err != nil {
+		return iso
+	}
+	switch t.Weekday() {
+	case time.Saturday:
+		return t.AddDate(0, 0, -1).Format("2006-01-02")
+	case time.Sunday:
+		return t.AddDate(0, 0, -2).Format("2006-01-02")
+	default:
+		return iso
+	}
 }
