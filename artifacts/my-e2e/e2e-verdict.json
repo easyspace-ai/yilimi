@@ -1,0 +1,47 @@
+{
+  "all_pass": false,
+  "gates": [
+    {
+      "name": "no_fake_tool_calls",
+      "pass": true
+    },
+    {
+      "name": "market_substantive",
+      "pass": false,
+      "detail": "market_report empty"
+    },
+    {
+      "name": "news_present",
+      "pass": false,
+      "detail": "news_report empty or too short"
+    },
+    {
+      "name": "sentiment_present",
+      "pass": false,
+      "detail": "sentiment_report empty or too short"
+    },
+    {
+      "name": "macro_substantive",
+      "pass": false,
+      "detail": "macro_report too short"
+    },
+    {
+      "name": "smart_money_substantive",
+      "pass": false,
+      "detail": "smart_money_report too short"
+    },
+    {
+      "name": "fundamentals_substantive",
+      "pass": false,
+      "detail": "fundamentals_report too short"
+    }
+  ],
+  "summary": "failed: market_substantive: market_report empty; news_present: news_report empty or too short; sentiment_present: sentiment_report empty or too short; macro_substantive: macro_report too short; smart_money_substantive: smart_money_report too short; fundamentals_substantive: fundamentals_report too short",
+  "hints": [
+    "L3: 市场段空→回看 L1 日线是否成功、Collect 是否 no_ohlcv。",
+    "L3: 分块过短→检查 realtimedata 网络与 pool.Errors；或调大 LLM 超时。",
+    "L3: 分块过短→检查 realtimedata 网络与 pool.Errors；或调大 LLM 超时。",
+    "L3: 分块过短→检查 realtimedata 网络与 pool.Errors；或调大 LLM 超时。",
+    "L3: 分块过短→检查 realtimedata 网络与 pool.Errors；或调大 LLM 超时。"
+  ]
+}

@@ -54,11 +54,7 @@ func StockDatabaseDir() string {
 	return DataRootDir()
 }
 
-// WorkspaceRoot 文档与索引等工作区根路径（OBSIDIAN_FS_ROOT，默认 /data/workspace）。
-// 与统一数据根 AI_DATA_DIR 无关。
+// WorkspaceRoot 文档工作区根路径（如 workspace/data、.plugins），位于 ${AI_DATA_DIR}/workspace。
 func WorkspaceRoot() string {
-	if r := strings.TrimSpace(os.Getenv("OBSIDIAN_FS_ROOT")); r != "" {
-		return filepath.Clean(r)
-	}
-	return filepath.Clean("/data/workspace")
+	return filepath.Clean(filepath.Join(DataRootDir(), "workspace"))
 }

@@ -1,25 +1,101 @@
 package webui
 
 import (
-	"io/fs"
+	"log"
 	"net/http"
 	"os"
+	"path"
+	"path/filepath"
 	"strings"
 
 	"github.com/gin-gonic/gin"
 )
 
-// Mount 掛載編譯進二進位的前端（Vite dist）。設 AISTOCK_SERVE_WEB=0 可僅啟 API、不托管頁面。
+func hasIndex(dir string) bool {
+	st, err := os.Stat(filepath.Join(dir, "index.html"))
+	return err == nil && !st.IsDir()
+}
+
+func resolveWebRoot() string {
+	if d := strings.TrimSpace(os.Getenv("AISTOCK_WEB_DIR")); d != "" {
+		d = filepath.Clean(d)
+		if hasIndex(d) {
+			return d
+		}
+		log.Printf("webui: AISTOCK_WEB_DIR=%s has no index.html; skipping static hosting", d)
+		return ""
+	}
+
+	var exeDir string
+	exe, err := os.Executable()
+	if err == nil {
+		exe, _ = filepath.EvalSymlinks(exe)
+		exeDir = filepath.Dir(exe)
+		candidate := filepath.Join(exeDir, "web")
+		if hasIndex(candidate) {
+			return candidate
+		}
+	}
+
+	if wd, err := os.Getwd(); err == nil {
+		candidate := filepath.Join(wd, "web")
+		if hasIndex(candidate) {
+			if exeDir != "" {
+				log.Printf("webui: using %s (executable-adjacent web/ missing index.html; CWD fallback for go run / dev)", candidate)
+			}
+			return candidate
+		}
+	}
+
+	if exeDir != "" {
+		log.Printf("webui: no static root (expected %s with index.html); API-only. Build: cd frontend && npm run build, deploy web/ beside the binary.", filepath.Join(exeDir, "web"))
+	} else {
+		log.Printf("webui: no static root; set AISTOCK_WEB_DIR or place ./web with index.html")
+	}
+	return ""
+}
+
+// joinUnderRoot builds an absolute path under webRoot and rejects path traversal.
+func joinUnderRoot(webRoot, rel string) (full string, ok bool) {
+	webRoot = filepath.Clean(webRoot)
+	cleanURL := path.Clean("/" + rel)
+	if cleanURL == "/" || cleanURL == "." {
+		return webRoot, true
+	}
+	rel = strings.TrimPrefix(cleanURL, "/")
+	full = filepath.Join(webRoot, filepath.FromSlash(rel))
+	rootAbs, err := filepath.Abs(webRoot)
+	if err != nil {
+		return "", false
+	}
+	fullAbs, err := filepath.Abs(full)
+	if err != nil {
+		return "", false
+	}
+	sep := string(filepath.Separator)
+	if fullAbs != rootAbs && !strings.HasPrefix(fullAbs, rootAbs+sep) {
+		return "", false
+	}
+	return fullAbs, true
+}
+
+// Mount 掛載與可執行檔同目錄下 web/ 的前端靜態資源（Vite 產物）。
+// AISTOCK_WEB_DIR 可覆蓋目錄；AISTOCK_SERVE_WEB=0 僅啟 API、不托管頁面。
 func Mount(engine *gin.Engine) {
 	if strings.TrimSpace(os.Getenv("AISTOCK_SERVE_WEB")) == "0" {
 		return
 	}
-	sub, err := fs.Sub(webDist, "webdist")
-	if err != nil {
-		panic(err)
+	webRoot := resolveWebRoot()
+	if webRoot == "" {
+		return
 	}
-	httpFS := http.FS(sub)
-	fileServer := http.FileServer(httpFS)
+	var err error
+	webRoot, err = filepath.Abs(filepath.Clean(webRoot))
+	if err != nil {
+		log.Printf("webui: %v", err)
+		return
+	}
+	log.Printf("webui: serving static files from %s", webRoot)
 
 	engine.NoRoute(func(c *gin.Context) {
 		if c.Request.Method != http.MethodGet && c.Request.Method != http.MethodHead {
@@ -31,23 +107,32 @@ func Mount(engine *gin.Engine) {
 			return
 		}
 		rel := strings.TrimPrefix(c.Request.URL.Path, "/")
+		rel = strings.Trim(rel, "/")
+
 		if rel != "" {
-			if fi, err := fs.Stat(sub, rel); err == nil && !fi.IsDir() {
-				fileServer.ServeHTTP(c.Writer, c.Request)
+			full, ok := joinUnderRoot(webRoot, rel)
+			if !ok {
+				c.Status(http.StatusNotFound)
 				return
 			}
-			// 目錄請求：嘗試 index.html
-			if fi, err := fs.Stat(sub, rel+"/index.html"); err == nil && !fi.IsDir() {
-				c.Request.URL.Path = "/" + rel + "/index.html"
-				fileServer.ServeHTTP(c.Writer, c.Request)
-				return
+			if fi, err := os.Stat(full); err == nil {
+				if !fi.IsDir() {
+					c.File(full)
+					return
+				}
+				idx := filepath.Join(full, "index.html")
+				if fi2, err := os.Stat(idx); err == nil && !fi2.IsDir() {
+					c.File(idx)
+					return
+				}
 			}
 		}
-		data, err := fs.ReadFile(sub, "index.html")
-		if err != nil {
+
+		idx := filepath.Join(webRoot, "index.html")
+		if _, err := os.Stat(idx); err != nil {
 			c.Status(http.StatusNotFound)
 			return
 		}
-		c.Data(http.StatusOK, "text/html; charset=utf-8", data)
+		c.File(idx)
 	})
 }

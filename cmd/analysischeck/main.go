@@ -17,9 +17,11 @@ import (
 	"os"
 	"time"
 
+	"github.com/easyspace-ai/stock_api/pkg/realtimedata"
 	"github.com/easyspace-ai/stock_api/pkg/tsdb"
 
 	"github.com/easyspace-ai/yilimi/internal/analysis/agents/common"
+	"github.com/easyspace-ai/yilimi/internal/analysis/datacollect"
 	"github.com/easyspace-ai/yilimi/internal/appenv"
 )
 
@@ -126,10 +128,43 @@ func main() {
 		return nil
 	})
 
+	// 3) datacollect 预采（复用上方 UnifiedClient，避免重复打开 DuckDB）
+	fmt.Println("\n--- 数据预采 datacollect（与 RunTradingWorkflow 一致）---")
+	rt, err := realtimedata.NewClient(realtimedata.Config{
+		DataDir:        datacollect.DefaultRealtimeDataDir(dataDir),
+		EnableStorage: true,
+		CacheMode:      realtimedata.CacheModeAuto,
+	})
+	if err != nil {
+		okAll = false
+		fmt.Printf("FAIL  realtimedata.NewClient: %v\n", err)
+	} else {
+		col := datacollect.NewCollector(client, rt, nil)
+		trd := time.Now().In(time.FixedZone("CST", 8*3600)).Format("2006-01-02")
+		pool, err := col.Collect(ctx, *symbol, trd)
+		if err != nil {
+			okAll = false
+			fmt.Printf("FAIL  Collect: %v\n", err)
+		} else {
+			fmt.Println("PASS  Collect（OHLCV 与附录已生成）")
+			if len(pool.Errors) > 0 {
+				fmt.Println("      子任务告警（不必然失败）：")
+				for k, v := range pool.Errors {
+					fmt.Printf("        %s: %s\n", k, v)
+				}
+			}
+			snippet := pool.StockDataText
+			if len(snippet) > 200 {
+				snippet = snippet[:200] + "…"
+			}
+			fmt.Printf("      日线节选: %s\n", snippet)
+		}
+	}
+
 	fmt.Println("\n--- 说明 ---")
-	fmt.Println("• 市场分析师 / 基本面分析师：使用上述 StockTools（工具失败会转成模型可读错误，不中断整次分析）。")
-	fmt.Println("• 舆情 / 新闻 / 宏观 / 主力资金：当前无独立数据工具，结论主要依赖模型；缺少外部数据源时易偏主观。")
-	fmt.Println("详细清单见仓库 docs/ai-analysis-data-and-apis.md")
+	fmt.Println("• 六名分析师已改为 datacollect 注入数据，不再依赖 LLM 自行调 get_stock_data / get_news。")
+	fmt.Println("• 交易员等环节仍可使用 StockTools。")
+	fmt.Println("• 若 CGO 报错，设置 CC=/usr/bin/clang 后重试；可执行 scripts/analysis-qa.sh。")
 
 	if !okAll {
 		os.Exit(1)

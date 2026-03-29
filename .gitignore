@@ -78,3 +78,5 @@ tdx-api/
 akquant/
 
 backend/data/
+
+internal/analysis/datacollect/data/

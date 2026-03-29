@@ -100,14 +100,6 @@ func main() {
 		}
 	}()
 
-	watcher, err := filesystem.NewWatcher(root, hub, indexer)
-	if err != nil {
-		log.Printf("fs watcher disabled: %v", err)
-	} else {
-		go watcher.Run()
-		defer func() { _ = watcher.Close() }()
-	}
-
 	config := clients.DefaultConfig()
 	if token := os.Getenv("TUSHARE_TOKEN"); token != "" {
 		config.TushareToken = token

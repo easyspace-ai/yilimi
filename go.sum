@@ -45,8 +45,8 @@ github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/dustin/go-humanize v1.0.1 h1:GzkhY7T5VNhEkwH0PVJgjz+fX1rhBrR7pRT3mDkpeCY=
 github.com/dustin/go-humanize v1.0.1/go.mod h1:Mu1zIs6XwVuF/gI1OepvI0qD18qycQx+mFykh5fBlto=
-github.com/easyspace-ai/stock_api v0.0.0-20260328151509-cc358b8e0c2f h1:HVjbtthQdp1OxVDZZrX/uUJSfUAtobsSL8OkK2YY+Fo=
-github.com/easyspace-ai/stock_api v0.0.0-20260328151509-cc358b8e0c2f/go.mod h1:mNfAOL/uVJssKmyaF6dZvYfsEjQR+uCLG9ZPKZG58fo=
+github.com/easyspace-ai/stock_api v0.0.0-20260328172657-e0c1bd7537bc h1:vgJeZAJ6lhmGFwALVL/PASrZPAyJbUDddZXS26LoN94=
+github.com/easyspace-ai/stock_api v0.0.0-20260328172657-e0c1bd7537bc/go.mod h1:mNfAOL/uVJssKmyaF6dZvYfsEjQR+uCLG9ZPKZG58fo=
 github.com/easyspace-ai/tdx v0.0.0-20260328150351-2211c794eb70 h1:9zx8LpySravfVjRodpYRNp4WsR1aKX97trYzjfQ5ySA=
 github.com/easyspace-ai/tdx v0.0.0-20260328150351-2211c794eb70/go.mod h1:T5DAkDh7aQCMiN9ZdSz+BMPO3OJUVrXeFcFPnOisOzY=
 github.com/eino-contrib/jsonschema v1.0.3 h1:2Kfsm1xlMV0ssY2nuxshS4AwbLFuqmPmzIjLVJ1Fsp0=

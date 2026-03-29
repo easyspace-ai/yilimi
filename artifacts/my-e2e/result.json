@@ -1,0 +1,8 @@
+{
+  "analysis_warnings": [
+    "环节「宏观分析师」执行异常（已记录，流程继续）: [NodeRunError] Post \"https://ark.cn-beijing.volces.com/api/coding/v3/chat/completions\": proxyconnect tcp: dial tcp 127.0.0.1:15236: connect: connection refused\n------------------------\nnode path: [node_1]"
+  ],
+  "company_of_interest": "600820.SH",
+  "symbol": "600820.SH",
+  "trade_date": "2025-01-15"
+}

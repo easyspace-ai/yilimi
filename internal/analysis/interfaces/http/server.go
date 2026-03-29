@@ -103,7 +103,7 @@ func RegisterAnalysisRoutes(engine *gin.Engine, handler *Handler) {
 	}
 }
 
-// RegisterAnalysisStatic 托管主前端靜態資源（編譯進二進位，見 internal/webui）。設 AISTOCK_SERVE_WEB=0 可禁用。
+// RegisterAnalysisStatic 托管主前端靜態資源（可執行檔旁 web/ 或 AISTOCK_WEB_DIR）。AISTOCK_SERVE_WEB=0 可禁用。
 func RegisterAnalysisStatic(engine *gin.Engine) {
 	webui.Mount(engine)
 }
